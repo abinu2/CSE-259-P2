@@ -411,11 +411,57 @@ report_move(Color, Board, From_File-From_Rank, To_File-To_Rank, Rating) :-
 
 /* ----------------------------------------------------------------------- */
 /* WRITE YOUR CODE FOR TASK-1 HERE */
-/* TASK 1: REPLACE THE print_board PREDICATE BELOW WITH YOUR CODE */
-/*         KEEP THE NAME print_board, JUST CHANGE THE IMPLEMENTATION*/
-/* ----------------------------------------------------------------------- */
 print_board(Board) :-
-    write(Board), nl.
+    nl,
+    write('    a b c d e f g h'), nl,
+    write('  +-----------------+'), nl,
+    print_ranks(Board, 8),
+    write('  +-----------------+'), nl,
+    write('    a b c d e f g h'), nl.
+
+print_ranks(_, 0) :- !.
+print_ranks(Board, Rank) :-
+    write(Rank), write(' | '),
+    print_files(Board, Rank, a),
+    write('|'), nl,
+    NextRank is Rank - 1,
+    print_ranks(Board, NextRank).
+
+print_files(_, _, i) :- !.
+print_files(Board, Rank, File) :-
+    print_piece(Board, File-Rank),
+    next_file(File, NextFile),
+    print_files(Board, Rank, NextFile).
+
+print_piece(Board, Square) :-
+    member(piece(Square, Color, Type), Board), !,
+    piece_symbol(Color, Type, Symbol),
+    write(Symbol), write(' ').
+print_piece(_, _) :-
+    write('. ').
+
+piece_symbol(white, king, 'K').
+piece_symbol(white, queen, 'Q').
+piece_symbol(white, rook, 'R').
+piece_symbol(white, bishop, 'B').
+piece_symbol(white, knight, 'N').
+piece_symbol(white, pawn, 'P').
+piece_symbol(black, king, 'K*').
+piece_symbol(black, queen, 'Q*').
+piece_symbol(black, rook, 'R*').
+piece_symbol(black, bishop, 'B*').
+piece_symbol(black, knight, 'N*').
+piece_symbol(black, pawn, 'P*').
+
+next_file(a, b).
+next_file(b, c).
+next_file(c, d).
+next_file(d, e).
+next_file(e, f).
+next_file(f, g).
+next_file(g, h).
+next_file(h, i).
+
 /* ----------------------------------------------------------------------- */
 
 
