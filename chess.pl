@@ -140,7 +140,124 @@ Rand is Number.               % Add random value to avoid deadlock
 /* TASK 2: IMPLEMENT playerA CODE HERE */
 /* MIMIC THE CODE FOR playerB */
 /* ----------------------------------------------------------------------- */
+strengthA([], _, _, Rand) :- 
+    noise_level(Level), 
+    random(0, Level, Number),
+    Rand is Number.
+    
+strengthA([state(_, _, _, _)|Board], Color, OppositeColor, Strength) :-
+    strengthA(Board, Color, OppositeColor, Strength), !.
+    
+strengthA([piece(_, Color, Type)|Board], Color, OppositeColor, Strength) :-
+    valueA(Type, Value),
+    strengthA(Board, Color, OppositeColor, PartialStrength),
+    Strength is PartialStrength + Value, !.
+    
+strengthA([piece(_, OppositeColor, Type)|Board], Color, OppositeColor, Strength) :-
+    valueA(Type, Value),
+    strengthA(Board, Color, OppositeColor, PartialStrength),
+    Strength is PartialStrength - Value.
 
+valueA(king, 10000) :- !.
+valueA(queen, 900) :- !.
+valueA(rook, 500) :- !.
+valueA(knight, 300) :- !.
+valueA(bishop, 300) :- !.
+valueA(pawn, 100) :- !.
+
+ply_depthA(3).
+
+playerA(Board, Move) :-
+    member(state(Color, _, _, _), Board),
+    ply_depthA(depth),
+    Alpha is -100000,
+    Beta is 100000,
+    collect_movesA(Board, Color, Moves),
+    find_best(Color, Board, Color, Moves, Depth, Alpha, Beta, Move, _).
+
+collect_movesA(Board, Color, Moves) :-
+    bagof(move(From, To), Piece^move(Board, From, To, Color, Piece), Moves), !.
+collect_movesA(_, _, []).
+
+evaluateA(Board, Color, Value) :-
+    opponent(Color, Opponent),
+    strength(Board, Color, Opponent, Value).
+
+find_best(_, _, _, [], _, _, _, none, -100000).
+find_best(Player, Board, Turn, [Move[Moves]], Depth, Alpha, Beta, BestMove, BestVal) :-
+    move(Board, Move, NewBoard),
+    NextDepth is Depth - 1,
+    member(state(_, _, _, _), Board).
+    member(state(NextTurn, _, _, _), NewBoard),
+    (
+        NextDepth =:= 0
+    ->  evaluateA(NewBoard, Player, Val)
+    ;   collect_movesA(NewBoard, NextTurn, NextMoves),
+        find_best(Player, NewBoard, NextTurn, NextMoves, NextDepth, Alpha, Beta, _, Val)
+    ),
+    sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, TempMove, TempVal),
+    find_best(Player, Board, Turn, Moves, Depth, Alpha, Beta, TempMove, TempVal, BestMove, BestVal).
+
+new_bounds(Player, Turn, Alpha, Beta, Val, NewAlpha, Beta) :-
+    Player = Turn,
+    Val > Alpha, !,
+    NewAlpha = Val.
+
+new_bounds(Player, Turn, Alpha, Beta, Val, Alpha, NewBeta) :-
+    Player \= Turn,
+    Val < Beta, !,
+        NewBeta = Val.
+
+new_bounds(_, _, Alpha, Beta, _, Alpha, Beta).
+
+better_of(Player, Turn, Move0, Val0, Move1, Val1, Move0, Val0) :-
+    Player = Turn,
+    Val0 >= Val1, !.
+
+better_of(Player, Turn, Move0, Val0, Move1, Val1, Move1, Val1) :-
+    Player = Turn,
+    Val0 < Val1, !.
+
+better_of(Player, Turn, Move0, Val0, Move1, Val1, Move0, Val0) :-
+    Player \= Turn,
+    Val0 =< Val1, !.
+
+better_of(_, _, _, _, Move1, Val1, Move1, Val1).
+
+    bookA([state(white, WhiteKing, WhiteKingRook, WhiteQueenRook),
+    state(black, BlackKing, BlackKingRook, BlackQueenRook),
+    piece(a-1, white, rook), piece(b-1, white, knight),
+    piece(c-1, white, bishop), piece(d-1, white, queen),
+    piece(e-1, white, king), piece(f-1, white, bishop),
+    piece(g-1, white, knight), piece(h-1, white, rook),
+    piece(a-2, white, pawn), piece(b-2, white, pawn),
+    piece(c-2, white, pawn), piece(d-2, white, pawn),
+    piece(e-2, white, pawn), piece(f-2, white, pawn),
+    piece(g-2, white, pawn), piece(h-2, white, pawn),
+    piece(a-8, black, rook), piece(b-8, black, knight),
+    piece(c-8, black, bishop), piece(d-8, black, queen),
+    piece(e-8, black, king), piece(f-8, black, bishop),
+    piece(g-8, black, knight), piece(h-8, black, rook),
+    piece(a-7, black, pawn), piece(b-7, black, pawn),
+    piece(c-7, black, pawn), piece(d-7, black, pawn),
+    piece(e-7, black, pawn), piece(f-7, black, pawn),
+    piece(g-7, black, pawn), piece(h-7, black, pawn)], e-2, e-4).
+
+sufficientA(Player, Board, Turn, [], Depth, Alpha, Beta, Move, Val, Move, Val) :- !.
+sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, Move, Val) :-
+    Player \== Turn,
+    Val < Alpha, !.
+sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, Move, Val) :-
+    Player = Turn,
+    Val > Beta, !.
+sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val,
+    BestMove, BestVal) :-
+    new_bounds(Player, Turn, Alpha, Beta, Val, NewAlpha, NewBeta),
+    find_best(Player, Board, Turn, Moves, Depth, NewAlpha, NewBeta, Move1, Val1),
+    better_of(Player, Turn, Move, Val, Move1, Val1, BestMove, BestVal).
+
+collect_movesA(Board, Color, Moves) :-
+    bagof(move(From, To), Piece^move(Board, From, To, Color, Piece), Moves).
 
 
 /* -------------------------- DO NOT OVERRIDE --------------------------- */
