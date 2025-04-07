@@ -84,48 +84,63 @@ init_board([
 
 /* ----------------------------------------------------------------------- */
 /* WRITE YOUR CODE FOR TASK-3 HERE */
-/* Task 3: Autocomplete playerA and playerB 
- */
-play(Board) :- 
+/* Task 3: Autocomplete playerA and playerB */
+play(Board) :-
     print_board(Board),
     % Move playerA automatically
     execute_command(playerA, Board, NewBoard),
-    
     % Move playerB automatically
     execute_command(playerB, NewBoard, NextNewBoard),
-    
     % Continue play recursively
     play(NextNewBoard).
 
 /* Generate a move for playerA */
 execute_command(playerA, Board, NewBoard) :-
     player(playerA, Color),
+    opposite(Color, OppositeColor),
     strengthA(Board, Color, OppositeColor, _),
     ply_depthA(Depth),
     collect_movesA(Board, Color, Moves),
-    alpha_beta(playerA, Board, Depth, -32000, 32000, Move, _),
+    member(Move, Moves),
+    alpha_beta(playerA, Board, Color, Depth, -32000, 32000, Move, _),
     make_move(Board, Move, NewBoard), !.
 
 /* Generate a move for playerB */
 execute_command(playerB, Board, NewBoard) :-
     player(playerB, Color),
+    opposite(Color, OppositeColor),
     strengthB(Board, Color, OppositeColor, _),
     ply_depthB(Depth),
     collect_movesB(Board, Color, Moves),
-    alpha_beta(playerB, Board, Depth, -32000, 32000, Move, _),
+    member(Move, Moves),
+    alpha_beta(playerB, Board, Color, Depth, -32000, 32000, Move, _),
     make_move(Board, Move, NewBoard), !.
 
-/* ----------------------------------------------------------------------- */
-play(Board) :-
-		/* move playerA */
-		/* get_command asks the user for the move to be made. 
-		   modify this so that playerA moves on its own */
-    get_command(Command),
-    execute_command(Command, Board, NewBoard),
+/* Handle user moves */
+execute_command(Move, Board, NewBoard) :-
+    parse_move(Move, From, To),
+    move(Board, From, To, white, _),
+    make_move(Board, From, To, NewBoard), !.
 
-    /* move playerB */
-    execute_command(playerB, NewBoard, NextNewBoard),
-    play(NextNewBoard).
+/* Handle AI moves */
+execute_command(Player, Board, NewBoard) :-
+    respond_to(Player, Board, NewBoard), !.
+
+/* Catch unexpected situations */
+execute_command(_, _, _) :-
+    write('What?'),
+    halt(0).
+
+/* Make move helper predicate */
+make_move(Board, move(From, To), NewBoard) :-
+    make_move(Board, From, To, NewBoard).
+
+/* Alpha-beta helper predicate */
+alpha_beta(Player, Board, Color, Depth, Alpha, Beta, Move, Val) :-
+    alpha_beta(Player, Board, Color, Depth, Alpha, Beta, Move, Val).
+
+/* ----------------------------------------------------------------------- */
+
 
 
 /* getting command from the user so that playerA aka white can move */
@@ -134,16 +149,17 @@ get_command(Command) :-
     read(Command), !.
   
 
+
 /* execute the move selected */
 execute_command(Move, Board, NewBoard) :-
          parse_move(Move, From, To),
-         move(Board, From, To, white, Piece),
+         move(Board, From, To, white, _),
          make_move(Board, From, To, NewBoard), !.
 
 execute_command(Player, Board, NewBoard) :-
     respond_to(Player, Board, NewBoard), !.
 
-execute_command(X, Board, _) :-     % Use to catch unexpected situations
+execute_command(_, _, _) :-     % Use to catch unexpected situations
     write('What?'),
     halt(0).
 
@@ -165,22 +181,23 @@ Rand is Number.               % Add random value to avoid deadlock
 
 /* ----------------------------------------------------------------------- */
 /* WRITE YOUR CODE FOR TASK-2 HERE */
-% Color white for playerA, color black for playerB    
+% Color white for playerA, color black for playerB
 % Skip state information in strength calculation
 strengthA([state(_, _, _, _)|Board], Color, OppositeColor, Strength) :-
     strengthA(Board, Color, OppositeColor, Strength), !.
-    
+
 % Calculate strength for player pieces
 strengthA([piece(_, Color, Type)|Board], Color, OppositeColor, Strength) :-
     valueA(Type, Value),
     strengthA(Board, Color, OppositeColor, PartialStrength),
     Strength is PartialStrength + Value, !.
-    
+
 % Calculate strength for opponent pieces
 strengthA([piece(_, OppositeColor, Type)|Board], Color, OppositeColor, Strength) :-
     valueA(Type, Value),
     strengthA(Board, Color, OppositeColor, PartialStrength),
     Strength is PartialStrength - Value.
+
 % Base case for empty board
 strengthA([], _, _, 0).
 
@@ -196,33 +213,36 @@ valueA(pawn, 100) :- !.
 ply_depthA(3).
 
 % Book opening moves for playerA
-bookA([state(white, WhiteKing, WhiteKingRook, WhiteQueenRook),
-    state(black, BlackKing, BlackKingRook, BlackQueenRook),
-    piece(a-1, white, rook), piece(b-1, white, knight),
-    piece(c-1, white, bishop), piece(d-1, white, queen),
-    piece(e-1, white, king), piece(f-1, white, bishop),
-    piece(g-1, white, knight), piece(h-1, white, rook),
-    piece(a-2, white, pawn), piece(b-2, white, pawn),
-    piece(c-2, white, pawn), piece(d-2, white, pawn),
-    piece(e-2, white, pawn), piece(f-2, white, pawn),
-    piece(g-2, white, pawn), piece(h-2, white, pawn),
-    piece(a-8, black, rook), piece(b-8, black, knight),
-    piece(c-8, black, bishop), piece(d-8, black, queen),
-    piece(e-8, black, king), piece(f-8, black, bishop),
-    piece(g-8, black, knight), piece(h-8, black, rook),
-    piece(a-7, black, pawn), piece(b-7, black, pawn),
-    piece(c-7, black, pawn), piece(d-7, black, pawn),
-    piece(e-7, black, pawn), piece(f-7, black, pawn),
-    piece(g-7, black, pawn), piece(h-7, black, pawn)], e-2, e-4).
+bookA([state(white, _, _, _),
+      state(black, _, _, _),
+      piece(a-1, white, rook), piece(b-1, white, knight),
+      piece(c-1, white, bishop), piece(d-1, white, queen),
+      piece(e-1, white, king), piece(f-1, white, bishop),
+      piece(g-1, white, knight), piece(h-1, white, rook),
+      piece(a-2, white, pawn), piece(b-2, white, pawn),
+      piece(c-2, white, pawn), piece(d-2, white, pawn),
+      piece(e-2, white, pawn), piece(f-2, white, pawn),
+      piece(g-2, white, pawn), piece(h-2, white, pawn),
+      piece(a-8, black, rook), piece(b-8, black, knight),
+      piece(c-8, black, bishop), piece(d-8, black, queen),
+      piece(e-8, black, king), piece(f-8, black, bishop),
+      piece(g-8, black, knight), piece(h-8, black, rook),
+      piece(a-7, black, pawn), piece(b-7, black, pawn),
+      piece(c-7, black, pawn), piece(d-7, black, pawn),
+      piece(e-7, black, pawn), piece(f-7, black, pawn),
+      piece(g-7, black, pawn), piece(h-7, black, pawn)], e-2, e-4).
 
 % Alpha-beta pruning implementation
-sufficientA(Player, Board, Turn, [], Depth, Alpha, Beta, Move, Val, Move, Val) :- !.
-sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, Move, Val) :-
+sufficientA(_, _, _, [], _, _, _, Move, Val, Move, Val) :- !.
+
+sufficientA(Player, _, Turn, _, _, Alpha, _, Move, Val, Move, Val) :-
     Player \== Turn,
-    Val < Alpha, !.  % Pruning at MIN node
-sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, Move, Val) :-
+    Val < Alpha, !. % Pruning at MIN node
+
+sufficientA(Player, _, Turn, _, _, _, Beta, Move, Val, Move, Val) :-
     Player = Turn,
-    Val > Beta, !.   % Pruning at MAX node
+    Val > Beta, !. % Pruning at MAX node
+
 sufficientA(Player, Board, Turn, Moves, Depth, Alpha, Beta, Move, Val, BestMove, BestVal) :-
     new_bounds(Player, Turn, Alpha, Beta, Val, NewAlpha, NewBeta),
     find_best(Player, Board, Turn, Moves, Depth, NewAlpha, NewBeta, Move1, Val1),
@@ -273,8 +293,8 @@ valueB(pawn,   100) :- ! .
 
 % PlayerB book moves, black
 bookB( [ state(white, WhiteKing, WhiteKingRook, WhiteQueenRook), % e2e4
-    state(black, BlackKing, BlackKingRook, BlackQueenRook), % respond with
-    piece(a-8, black, rook  ), piece(b-8, black, knight ),   % ...   e7e5
+    state(black, BlackKing, BlackKingRook, BlackQueenRook),
+    piece(a-8, black, rook  ), piece(b-8, black, knight ),  
     piece(c-8, black, bishop), piece(d-8, black, queen ),
     piece(e-8, black, king  ), piece(f-8, black, bishop),
     piece(g-8, black, knight ), piece(h-8, black, rook  ),
@@ -505,11 +525,11 @@ report_move(Color, Board, From_File-From_Rank, To_File-To_Rank, Rating) :-
 /* WRITE YOUR CODE FOR TASK-1 HERE */
 print_board(Board) :-
     nl,
-    write('    a b c d e f g h'), nl,
-    write('  +-----------------+'), nl,
+    write(' a b c d e f g h'), nl,
+    write(' +-----------------+'), nl,
     print_ranks(Board, 8),
-    write('  +-----------------+'), nl,
-    write('    a b c d e f g h'), nl.
+    write(' +-----------------+'), nl,
+    write(' a b c d e f g h'), nl.
 
 % Print each rank of the board
 print_ranks(_, 0) :- !.
