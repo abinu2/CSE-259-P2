@@ -90,10 +90,11 @@ play(Board) :-
 		/* move playerA */
 		/* get_command asks the user for the move to be made. 
 		   modify this so that playerA moves on its own */
-    get_command(Command),
-    execute_command(Command, Board, NewBoard),
+     % playerA (white) autmatically selects its move
+    playerA(Board, Move),
+    execute_command(Move, Board, NewBoard),
 
-    /* move playerB */
+    % playerB (black) makes its move as before
     execute_command(playerB, NewBoard, NextNewBoard),
     play(NextNewBoard).
 
